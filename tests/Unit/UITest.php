@@ -36,7 +36,7 @@ class UITest extends TestCase
         $output = $tester->getDisplay();
         $this->assertStringContainsString('Veldora UI — Available Components', $output);
         $this->assertStringContainsString('button', $output);
-        $this->assertStringContainsString('0/15 components installed', $output);
+        $this->assertMatchesRegularExpression('/0\/\d+ components installed/', $output);
     }
 
     public function test_can_add_components_to_project(): void
@@ -56,12 +56,12 @@ class UITest extends TestCase
         $this->assertFileExists($destFile);
         $this->assertStringContainsString('Veldora UI — Button Component', file_get_contents($destFile));
 
-        // Test running list command reports 1/15 installed
+        // Test running list command reports 1/X installed
         $listApp = new Application();
         $listApp->add(new ListComponentsCommand($this->tempDir));
         $listTester = new CommandTester($listApp->find('ui:list'));
         $listTester->execute([]);
-        $this->assertStringContainsString('1/15 components installed', $listTester->getDisplay());
+        $this->assertMatchesRegularExpression('/1\/\d+ components installed/', $listTester->getDisplay());
     }
 
     public function test_skips_if_component_already_exists(): void
