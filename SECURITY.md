@@ -9,6 +9,6 @@
 
 ## Reporting a Vulnerability
 
-If you discover a security vulnerability within Veldora Core, please send an e-mail to `security@veldora.org` or open a private security advisory on GitHub.
+If you discover a security vulnerability within Veldora Core, please open a **[private security advisory on GitHub](https://github.com/veldorahq/veldora-core/security/advisories/new)**.
 
 All security vulnerabilities will be promptly addressed.

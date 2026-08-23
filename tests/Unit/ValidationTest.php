@@ -29,7 +29,7 @@ class ValidationTest extends TestCase
     {
         $rules = ['email' => 'email'];
 
-        $validatorPass = new Validator(['email' => 'tech@veldora.dev'], $rules);
+        $validatorPass = new Validator(['email' => 'tech@example.com'], $rules);
         $this->assertFalse($validatorPass->fails());
 
         $validatorFail = new Validator(['email' => 'invalid-email-address'], $rules);
