@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="https://raw.githubusercontent.com/veldorahq/veldora/main/docs-site/public/favicon.svg" width="80" height="80" alt="Veldora Logo">
+  <img src="https://raw.githubusercontent.com/veldorahq/veldora-core/main/assets/v-icon.png" width="80" height="80" alt="Veldora Logo">
 </p>
 
 <h1 align="center">Veldora Framework Core</h1>
