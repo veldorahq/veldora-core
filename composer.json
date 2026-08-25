@@ -1,24 +1,29 @@
 {
     "name": "veldora/framework",
-    "description": "The Veldora Framework Core",
+    "description": "The Veldora PHP Framework Core — Expressive routing, native templates, ORM, CLI, Auth, and more.",
+    "version": "0.5.0",
+    "type": "library",
+    "keywords": ["veldora", "framework", "php", "mvc", "orm", "auth", "cli"],
     "license": "MIT",
     "authors": [
         {
             "name": "Shahriyar Fahim"
         }
     ],
-    "type": "library",
     "require": {
         "php": "^8.2 || ^8.3",
-        "psr/container": "^2.0",
-        "symfony/console": "^6.0 || ^7.0"
+        "psr/container": "^2.0"
+    },
+    "suggest": {
+        "symfony/console": "Required only if using the full Symfony Console integration (^6.0|^7.0). A built-in polyfill is included for zero-dependency environments."
     },
     "bin": [
         "bin/veldora"
     ],
     "autoload": {
         "files": [
-            "src/helpers.php"
+            "src/helpers.php",
+            "src/Console/Polyfill.php"
         ],
         "psr-4": {
             "Veldora\\Framework\\": "src/"

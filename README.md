@@ -11,7 +11,7 @@
 <p align="center">
   <a href="https://packagist.org/packages/veldora/framework"><img src="https://img.shields.io/badge/php-8.2%20%7C%208.3-777bb4.svg?style=flat-square" alt="PHP Version"></a>
   <a href="https://github.com/veldorahq/veldora-core/blob/main/LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue.svg?style=flat-square" alt="License"></a>
-  <a href="https://github.com/veldorahq/veldora-core"><img src="https://img.shields.io/badge/version-0.4.0-7c6ef5.svg?style=flat-square" alt="Version"></a>
+  <a href="https://github.com/veldorahq/veldora-core"><img src="https://img.shields.io/badge/version-0.5.0-7c6ef5.svg?style=flat-square" alt="Version"></a>
 </p>
 
 ---
@@ -22,9 +22,10 @@
 
 - 🚀 **Blazing Fast**: Lightweight architecture with minimal overhead.
 - 🎨 **Modern Template Engine**: Native `.veldora.php` compilation with Blade-style directives and `<x-component>` tag syntax.
-- 🗄️ **Query Builder & Active Record**: Clean, chainable database queries and Model layer.
-- 🛠️ **Full CLI Engine**: 41+ built-in commands for generators, database migrations, UI components, and development server.
-- 🔒 **Security First**: Native CSRF protection, secure password hashing, prepared SQL statements, and session auth.
+- 🗄️ **Query Builder & Active Record**: Clean, chainable database queries, `DB` Facade, `SoftDeletes`, Model Events & Observers.
+- 🔐 **Complete Auth Suite**: Login, registration, password recovery, profile editing, email verification with pure Veldora UI views.
+- 🛠️ **Full CLI Engine**: 43+ built-in commands for generators, migrations, UI components, maintenance mode, and development server.
+- 🔒 **Security First**: Native CSRF protection, secure password hashing, prepared SQL statements, rate-limiting middleware, and session auth.
 - 🧩 **Service Container**: Flexible IoC container with automatic dependency resolution.
 
 ---
