@@ -1,7 +1,7 @@
 {
     "name": "veldora/framework",
+    "version": "0.5.2",
     "description": "The Veldora PHP Framework Core — Expressive routing, native templates, ORM, CLI, Auth, and more.",
-    "version": "0.5.0",
     "type": "library",
     "keywords": ["veldora", "framework", "php", "mvc", "orm", "auth", "cli"],
     "license": "MIT",

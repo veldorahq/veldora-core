@@ -5,6 +5,26 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## [0.5.2] — 2026-08-30
+
+### Added
+- Composer Packagist release tag version metadata unified across core and UI packages.
+- Enhanced `executeDirect()` invocation support for command runners.
+- Bumped Application version to `0.5.2`.
+
+### Fixed
+- Tag version mismatch synchronization for Composer VCS driver.
+
+---
+
+## [0.5.1] — 2026-08-28
+
+### Added
+- Route constraint matching optimization.
+- View partial cache key resolution.
+
+---
+
 ## [0.5.0] — 2026-08-25
 
 ### Added

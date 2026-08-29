@@ -11,7 +11,7 @@
 <p align="center">
   <a href="https://packagist.org/packages/veldora/framework"><img src="https://img.shields.io/badge/php-8.2%20%7C%208.3-777bb4.svg?style=flat-square" alt="PHP Version"></a>
   <a href="https://github.com/veldorahq/veldora-core/blob/main/LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue.svg?style=flat-square" alt="License"></a>
-  <a href="https://github.com/veldorahq/veldora-core"><img src="https://img.shields.io/badge/version-0.5.0-7c6ef5.svg?style=flat-square" alt="Version"></a>
+  <a href="https://github.com/veldorahq/veldora-core"><img src="https://img.shields.io/badge/version-0.5.2-7c6ef5.svg?style=flat-square" alt="Version"></a>
 </p>
 
 ---
