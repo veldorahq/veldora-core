@@ -652,7 +652,7 @@ namespace Symfony\Component\Console {
             /** @var array<string, Command> */
             protected array $commands = [];
 
-            public function __construct(public string $name = 'Veldora', public string $version = '0.5.0') {}
+            public function __construct(public string $name = 'Veldora', public string $version = '0.5.6') {}
 
             public function add(Command $command): ?Command
             {
