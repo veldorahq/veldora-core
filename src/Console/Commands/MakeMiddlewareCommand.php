@@ -22,9 +22,8 @@ class MakeMiddlewareCommand extends Command
             ->addArgument('name', InputArgument::REQUIRED, 'The name of the Middleware class');
     }
 
-    protected function execute(InputInterface $input, OutputInterface $output): int
+    public function executeDirect(string $name): void
     {
-        $name = (string) $input->getArgument('name');
         if (!str_ends_with($name, 'Middleware')) {
             $name .= 'Middleware';
         }
@@ -65,13 +64,18 @@ PHP;
         }
 
         if (file_exists($file)) {
-            $output->writeln("<error>Middleware already exists:</error> app/Http/Middleware/{$name}.php");
-            return Command::FAILURE;
+            fwrite(STDERR, "\033[31mError:\033[0m Middleware already exists: app/Http/Middleware/{$name}.php\n");
+            exit(1);
         }
 
         file_put_contents($file, $content);
-        $output->writeln("<info>Created Middleware:</info> app/Http/Middleware/{$name}.php");
+        echo "\033[32m✔ Created Middleware:\033[0m app/Http/Middleware/{$name}.php\n";
+    }
 
+    protected function execute(InputInterface $input, OutputInterface $output): int
+    {
+        $name = (string) $input->getArgument('name');
+        $this->executeDirect($name);
         return Command::SUCCESS;
     }
 }

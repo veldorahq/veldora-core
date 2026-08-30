@@ -22,9 +22,8 @@ class MakeControllerCommand extends Command
             ->addArgument('name', InputArgument::REQUIRED, 'The name of the Controller class');
     }
 
-    protected function execute(InputInterface $input, OutputInterface $output): int
+    public function executeDirect(string $name): void
     {
-        $name = (string) $input->getArgument('name');
         if (!str_ends_with($name, 'Controller')) {
             $name .= 'Controller';
         }
@@ -49,7 +48,7 @@ class {$name}
      */
     public function index(Request \$request): Response
     {
-        return view('welcome');
+        return view('home');
     }
 }
 PHP;
@@ -60,13 +59,18 @@ PHP;
         }
 
         if (file_exists($controllerFile)) {
-            $output->writeln("<error>Controller already exists:</error> app/Controllers/{$name}.php");
-            return Command::FAILURE;
+            fwrite(STDERR, "\033[31mError:\033[0m Controller already exists: app/Controllers/{$name}.php\n");
+            exit(1);
         }
 
         file_put_contents($controllerFile, $content);
-        $output->writeln("<info>Created Controller:</info> app/Controllers/{$name}.php");
+        echo "\033[32m✔ Created Controller:\033[0m app/Controllers/{$name}.php\n";
+    }
 
+    protected function execute(InputInterface $input, OutputInterface $output): int
+    {
+        $name = (string) $input->getArgument('name');
+        $this->executeDirect($name);
         return Command::SUCCESS;
     }
 }

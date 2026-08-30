@@ -20,18 +20,22 @@ class UpCommand extends Command
             ->setDescription('Bring the application out of maintenance mode');
     }
 
-    protected function execute(InputInterface $input, OutputInterface $output): int
+    public function executeDirect(): void
     {
         $app = Application::getInstance();
         $downFile = $app->storagePath('framework/down');
 
         if (file_exists($downFile)) {
             unlink($downFile);
-            $output->writeln('<info>Application is now live.</info>');
+            echo "\n\033[32m✔ Application is now live.\033[0m\n\n";
         } else {
-            $output->writeln('<comment>Application is already live.</comment>');
+            echo "\n\033[33mApplication is already live.\033[0m\n\n";
         }
+    }
 
+    protected function execute(InputInterface $input, OutputInterface $output): int
+    {
+        $this->executeDirect();
         return Command::SUCCESS;
     }
 }

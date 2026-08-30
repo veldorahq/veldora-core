@@ -5,6 +5,21 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## [0.5.7] — 2026-08-30
+
+### Added
+- **`down` / `up` commands** — Both are now fully registered in the standalone CLI runner (previously missing from `bin/veldora` switch).
+- **`executeDirect()` on all remaining commands** — `MakeControllerCommand`, `MakeModelCommand`, `MakeMigrationCommand`, `MakeSeederCommand`, `MakeMiddlewareCommand`, `MakeRequestCommand`, `MakeResourceCommand`, `MakeFactoryCommand`, `DownCommand`, `UpCommand` — all now callable without Symfony Console bootstrap.
+- **48 CLI commands** — Complete standalone + Symfony Console dual-mode runner with all 48 commands properly wired.
+- **Queue commands** (`queue:work`, `queue:failed`, `queue:retry`, `queue:clear`) added to standalone CLI runner.
+
+### Fixed
+- `make:migration` now generates anonymous `return new class extends Migration {}` format (consistent with `make:auth`).
+- `make:model -m` now correctly delegates to `MakeMigrationCommand::executeDirect()` instead of dead Symfony Application lookup.
+- `make:auth` now callable directly via `executeDirect()` without Symfony Console guard.
+
+---
+
 ## [0.5.6] — 2026-08-30
 
 ### Fixed

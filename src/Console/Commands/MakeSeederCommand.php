@@ -22,9 +22,8 @@ class MakeSeederCommand extends Command
             ->addArgument('name', InputArgument::REQUIRED, 'The name of the Seeder class');
     }
 
-    protected function execute(InputInterface $input, OutputInterface $output): int
+    public function executeDirect(string $name): void
     {
-        $name = (string) $input->getArgument('name');
         if (!str_ends_with($name, 'Seeder')) {
             $name .= 'Seeder';
         }
@@ -59,13 +58,18 @@ PHP;
         }
 
         if (file_exists($file)) {
-            $output->writeln("<error>Seeder already exists:</error> database/seeders/{$name}.php");
-            return Command::FAILURE;
+            fwrite(STDERR, "\033[31mError:\033[0m Seeder already exists: database/seeders/{$name}.php\n");
+            exit(1);
         }
 
         file_put_contents($file, $content);
-        $output->writeln("<info>Created Seeder:</info> database/seeders/{$name}.php");
+        echo "\033[32m✔ Created Seeder:\033[0m database/seeders/{$name}.php\n";
+    }
 
+    protected function execute(InputInterface $input, OutputInterface $output): int
+    {
+        $name = (string) $input->getArgument('name');
+        $this->executeDirect($name);
         return Command::SUCCESS;
     }
 }

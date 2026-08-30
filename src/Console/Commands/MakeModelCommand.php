@@ -24,10 +24,8 @@ class MakeModelCommand extends Command
             ->addOption('migration', 'm', InputOption::VALUE_NONE, 'Create a new migration file for the model');
     }
 
-    protected function execute(InputInterface $input, OutputInterface $output): int
+    public function executeDirect(string $name, bool $withMigration = false): void
     {
-        $name = (string) $input->getArgument('name');
-        
         $app = Application::getInstance();
         $modelFile = $app->basePath("app/Models/{$name}.php");
 
@@ -52,15 +50,14 @@ PHP;
         }
 
         if (file_exists($modelFile)) {
-            $output->writeln("<error>Model already exists:</error> app/Models/{$name}.php");
-            return Command::FAILURE;
+            fwrite(STDERR, "\033[31mError:\033[0m Model already exists: app/Models/{$name}.php\n");
+            exit(1);
         }
 
         file_put_contents($modelFile, $content);
-        $output->writeln("<info>Created Model:</info> app/Models/{$name}.php");
+        echo "\033[32m✔ Created Model:\033[0m app/Models/{$name}.php\n";
 
-        // Optional migration creation
-        if ($input->getOption('migration')) {
+        if ($withMigration) {
             $pluralName = strtolower(preg_replace('/(?<!^)[A-Z]/', '_$0', $name));
             if (str_ends_with($pluralName, 'y')) {
                 $pluralName = substr($pluralName, 0, -1) . 'ies';
@@ -69,15 +66,15 @@ PHP;
             }
 
             $migrationName = "create_{$pluralName}_table";
-            
-            // Execute the make:migration command internally
-            $command = $this->getApplication()->find('make:migration');
-            $command->run(
-                new \Symfony\Component\Console\Input\ArrayInput(['name' => $migrationName]),
-                $output
-            );
+            (new MakeMigrationCommand())->executeDirect($migrationName);
         }
+    }
 
+    protected function execute(InputInterface $input, OutputInterface $output): int
+    {
+        $name = (string) $input->getArgument('name');
+        $withMigration = (bool) $input->getOption('migration');
+        $this->executeDirect($name, $withMigration);
         return Command::SUCCESS;
     }
 }

@@ -22,7 +22,7 @@ class DownCommand extends Command
             ->addOption('secret', null, InputOption::VALUE_OPTIONAL, 'Secret token to bypass maintenance mode');
     }
 
-    protected function execute(InputInterface $input, OutputInterface $output): int
+    public function executeDirect(?string $secret = null): void
     {
         $app = Application::getInstance();
         $downFile = $app->storagePath('framework/down');
@@ -34,17 +34,21 @@ class DownCommand extends Command
 
         $payload = [
             'down_at' => date('Y-m-d H:i:s'),
-            'secret'  => $input->getOption('secret'),
+            'secret'  => $secret,
         ];
 
         file_put_contents($downFile, json_encode($payload, JSON_PRETTY_PRINT));
 
-        $output->writeln('<comment>Application is now in maintenance mode.</comment>');
-
-        if ($payload['secret']) {
-            $output->writeln("  Bypass via: <info>?secret={$payload['secret']}</info>");
+        echo "\n\033[33mApplication is now in maintenance mode.\033[0m\n";
+        if ($secret) {
+            echo "  Bypass via: \033[32m?secret={$secret}\033[0m\n";
         }
+        echo "\n";
+    }
 
+    protected function execute(InputInterface $input, OutputInterface $output): int
+    {
+        $this->executeDirect($input->getOption('secret'));
         return Command::SUCCESS;
     }
 }

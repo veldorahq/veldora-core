@@ -22,9 +22,8 @@ class MakeResourceCommand extends Command
             ->addArgument('name', InputArgument::REQUIRED, 'The name of the Resource class');
     }
 
-    protected function execute(InputInterface $input, OutputInterface $output): int
+    public function executeDirect(string $name): void
     {
-        $name = (string) $input->getArgument('name');
         if (!str_ends_with($name, 'Resource')) {
             $name .= 'Resource';
         }
@@ -66,13 +65,18 @@ PHP;
         }
 
         if (file_exists($file)) {
-            $output->writeln("<error>Resource already exists:</error> app/Http/Resources/{$name}.php");
-            return Command::FAILURE;
+            fwrite(STDERR, "\033[31mError:\033[0m Resource already exists: app/Http/Resources/{$name}.php\n");
+            exit(1);
         }
 
         file_put_contents($file, $content);
-        $output->writeln("<info>Created Resource:</info> app/Http/Resources/{$name}.php");
+        echo "\033[32m✔ Created Resource:\033[0m app/Http/Resources/{$name}.php\n";
+    }
 
+    protected function execute(InputInterface $input, OutputInterface $output): int
+    {
+        $name = (string) $input->getArgument('name');
+        $this->executeDirect($name);
         return Command::SUCCESS;
     }
 }

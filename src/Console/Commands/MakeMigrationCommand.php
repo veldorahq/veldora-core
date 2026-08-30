@@ -22,9 +22,8 @@ class MakeMigrationCommand extends Command
             ->addArgument('name', InputArgument::REQUIRED, 'The name of the migration');
     }
 
-    protected function execute(InputInterface $input, OutputInterface $output): int
+    public function executeDirect(string $name): void
     {
-        $name = (string) $input->getArgument('name');
         $snakeName = strtolower(preg_replace('/(?<!^)[A-Z]/', '_$0', $name));
 
         // Detect table name from migration description (e.g. create_users_table => users)
@@ -32,8 +31,6 @@ class MakeMigrationCommand extends Command
         if (preg_match('/^create_(.*)_table$/i', $snakeName, $matches)) {
             $tableName = $matches[1];
         }
-
-        $className = str_replace(' ', '', ucwords(str_replace('_', ' ', $snakeName)));
 
         $timestamp = date('Y_m_d_His');
         $filename = "{$timestamp}_{$snakeName}.php";
@@ -50,7 +47,7 @@ use Veldora\Framework\Database\Schema\Blueprint;
 use Veldora\Framework\Database\Schema\Migration;
 use Veldora\Framework\Database\Schema\Schema;
 
-class {$className} extends Migration
+return new class extends Migration
 {
     /**
      * Run the migrations.
@@ -71,7 +68,7 @@ class {$className} extends Migration
     {
         Schema::dropIfExists('{$tableName}');
     }
-}
+};
 PHP;
 
         $dir = dirname($migrationFile);
@@ -81,8 +78,13 @@ PHP;
 
         file_put_contents($migrationFile, $content);
 
-        $output->writeln("<info>Created Migration:</info> database/migrations/{$filename}");
+        echo "\033[32m✔ Created Migration:\033[0m database/migrations/{$filename}\n";
+    }
 
+    protected function execute(InputInterface $input, OutputInterface $output): int
+    {
+        $name = (string) $input->getArgument('name');
+        $this->executeDirect($name);
         return Command::SUCCESS;
     }
 }

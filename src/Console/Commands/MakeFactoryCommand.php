@@ -24,14 +24,13 @@ class MakeFactoryCommand extends Command
             ->addOption('model', 'm', InputOption::VALUE_OPTIONAL, 'The corresponding Model class');
     }
 
-    protected function execute(InputInterface $input, OutputInterface $output): int
+    public function executeDirect(string $name, ?string $model = null): void
     {
-        $name = (string) $input->getArgument('name');
         if (!str_ends_with($name, 'Factory')) {
             $name .= 'Factory';
         }
 
-        $model = (string) ($input->getOption('model') ?: substr($name, 0, -7));
+        $model = (string) ($model ?: substr($name, 0, -7));
 
         $app  = Application::getInstance();
         $file = $app->basePath("database/factories/{$name}.php");
@@ -79,13 +78,19 @@ PHP;
         }
 
         if (file_exists($file)) {
-            $output->writeln("<error>Factory already exists:</error> database/factories/{$name}.php");
-            return Command::FAILURE;
+            fwrite(STDERR, "\033[31mError:\033[0m Factory already exists: database/factories/{$name}.php\n");
+            exit(1);
         }
 
         file_put_contents($file, $content);
-        $output->writeln("<info>Created Factory:</info> database/factories/{$name}.php");
+        echo "\033[32m✔ Created Factory:\033[0m database/factories/{$name}.php\n";
+    }
 
+    protected function execute(InputInterface $input, OutputInterface $output): int
+    {
+        $name = (string) $input->getArgument('name');
+        $model = $input->getOption('model') ? (string) $input->getOption('model') : null;
+        $this->executeDirect($name, $model);
         return Command::SUCCESS;
     }
 }
