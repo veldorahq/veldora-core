@@ -24,20 +24,13 @@ jobs:
           php-version: ${{ matrix.php }}
           extensions: mbstring, pdo, pdo_sqlite, json, xml, curl
           coverage: none
-          tools: composer:v2
-
-      - name: Cache Composer dependencies
-        uses: actions/cache@v4
-        with:
-          path: ~/.composer/cache
-          key: ${{ runner.os }}-composer-${{ hashFiles('composer.lock') }}
-          restore-keys: ${{ runner.os }}-composer-
+          tools: composer:v2, phpunit:10
 
       - name: Install dependencies
         run: composer install --prefer-dist --no-progress --no-interaction
 
       - name: Run PHPUnit
-        run: ./vendor/bin/phpunit --configuration phpunit.xml
+        run: phpunit --configuration phpunit.xml
 
   static-analysis:
     name: PHPStan Analysis
@@ -48,10 +41,11 @@ jobs:
       - uses: shivammathur/setup-php@v2
         with:
           php-version: '8.2'
-          tools: composer:v2
+          tools: composer:v2, phpstan
 
-      - run: composer install --prefer-dist --no-progress --no-interaction
+      - name: Install dependencies
+        run: composer install --prefer-dist --no-progress --no-interaction
 
       - name: Run PHPStan
-        run: ./vendor/bin/phpstan analyse --no-progress
+        run: phpstan analyse src/ --no-progress
         continue-on-error: true

@@ -209,6 +209,8 @@ namespace Symfony\Component\Console\Input {
                 return array_key_exists('--' . $name, $this->parameters) || array_key_exists($name, $this->parameters);
             }
 
+            protected mixed $stream = null;
+
             public function isInteractive(): bool
             {
                 return $this->interactive;
@@ -217,6 +219,16 @@ namespace Symfony\Component\Console\Input {
             public function setInteractive(bool $interactive): void
             {
                 $this->interactive = $interactive;
+            }
+
+            public function setStream(mixed $stream): void
+            {
+                $this->stream = $stream;
+            }
+
+            public function getStream(): mixed
+            {
+                return $this->stream;
             }
 
             public function __toString(): string
@@ -402,6 +414,7 @@ namespace Symfony\Component\Console\Command {
             protected array $arguments = [];
             protected array $options = [];
             protected ?InputDefinition $definition = null;
+            protected mixed $application = null;
 
             public function __construct(?string $name = null)
             {
@@ -409,6 +422,26 @@ namespace Symfony\Component\Console\Command {
                     $this->name = $name;
                 }
                 $this->configure();
+            }
+
+            public function setApplication(mixed $application = null): void
+            {
+                $this->application = $application;
+            }
+
+            public function getApplication(): mixed
+            {
+                return $this->application;
+            }
+
+            public function isEnabled(): bool
+            {
+                return true;
+            }
+
+            public function getAliases(): array
+            {
+                return [];
             }
 
             protected function configure(): void {}
@@ -478,7 +511,12 @@ namespace Symfony\Component\Console\Command {
             protected function execute(InputInterface $input, OutputInterface $output): int
             {
                 if (method_exists($this, 'executeDirect')) {
+                    ob_start();
                     $this->executeDirect();
+                    $content = (string) ob_get_clean();
+                    if ($content !== '') {
+                        $output->write($content);
+                    }
                     return self::SUCCESS;
                 }
                 return self::SUCCESS;
