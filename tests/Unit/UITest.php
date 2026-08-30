@@ -17,6 +17,34 @@ class UITest extends TestCase
         $this->tempDir = sys_get_temp_dir() . '/veldora_ui_test_' . uniqid();
         mkdir($this->tempDir, 0755, true);
         mkdir($this->tempDir . '/resources/views/components', 0755, true);
+
+        $registryDir = $this->tempDir . '/vendor/veldora/ui/src/Registry';
+        mkdir($registryDir, 0755, true);
+        file_put_contents($registryDir . '/ComponentRegistry.php', <<<'PHP'
+<?php
+
+namespace Veldora\UI\Registry;
+
+class ComponentRegistry
+{
+    public function all(): array
+    {
+        return [
+            'button' => [
+                'description' => 'Clickable button',
+                'usage' => '<x-button>Click me</x-button>',
+                'template' => "<!-- Veldora UI — Button Component -->\n<button>{{ $slot }}</button>",
+            ],
+            'badge' => [
+                'description' => 'Inline status badge',
+                'usage' => '<x-badge>New</x-badge>',
+                'template' => "<!-- Veldora UI — Badge Component -->\n<span>{{ $slot }}</span>",
+            ],
+        ];
+    }
+}
+PHP
+        );
     }
 
     protected function tearDown(): void
