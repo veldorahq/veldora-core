@@ -181,6 +181,17 @@ class Response
     }
 
     /**
+     * Flash a session value and return $this.
+     *
+     * Enables the common pattern: return back()->with('error', 'msg')
+     */
+    public function with(string $key, mixed $value): static
+    {
+        session()->flash($key, $value);
+        return $this;
+    }
+
+    /**
      * Queue a cookie deletion.
      */
     public function forgetCookie(string $name, string $path = '/', ?string $domain = null): self

@@ -301,6 +301,12 @@ class Request
      */
     public function session(): \Veldora\Framework\Session\Session
     {
+        if ($this->session === null && function_exists('session')) {
+            $sess = session();
+            if ($sess instanceof \Veldora\Framework\Session\Session) {
+                return $sess;
+            }
+        }
         if ($this->session === null) {
             throw new \RuntimeException('Session store not set on request.');
         }
@@ -346,11 +352,35 @@ class Request
     }
 
     /**
-     * Retrieve uploaded files.
+     * Retrieve uploaded files. Returns UploadedFile if standard file structure is detected.
      */
     public function file(string $key): mixed
     {
-        return $this->files[$key] ?? null;
+        $file = $this->files[$key] ?? null;
+
+        if (is_array($file) && isset($file['name'], $file['tmp_name'])) {
+            return new UploadedFile(
+                $file['name'],
+                $file['type'] ?? '',
+                $file['tmp_name'],
+                (int) ($file['size'] ?? 0),
+                (int) ($file['error'] ?? UPLOAD_ERR_OK)
+            );
+        }
+
+        return $file;
+    }
+
+    /**
+     * Check whether an uploaded file is present and valid.
+     */
+    public function hasFile(string $key): bool
+    {
+        $file = $this->file($key);
+        if ($file instanceof UploadedFile) {
+            return $file->isValid();
+        }
+        return false;
     }
 
     /**

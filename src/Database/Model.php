@@ -13,6 +13,12 @@ use Veldora\Framework\Database\Relations\BelongsToMany;
 use Veldora\Framework\Database\Relations\HasMany;
 use Veldora\Framework\Database\Relations\HasManyThrough;
 use Veldora\Framework\Database\Relations\HasOne;
+use Veldora\Framework\Database\Relations\HasOneThrough;
+use Veldora\Framework\Database\Relations\MorphMany;
+use Veldora\Framework\Database\Relations\MorphOne;
+use Veldora\Framework\Database\Relations\MorphTo;
+use Veldora\Framework\Database\Relations\MorphToMany;
+use Veldora\Framework\Database\Relations\MorphedByMany;
 use Veldora\Framework\Database\Relations\Relation;
 use Veldora\Framework\Foundation\Application;
 
@@ -474,6 +480,55 @@ abstract class Model implements ArrayAccess, JsonSerializable
     }
 
     /**
+     * Get the first record matching the attributes or create it.
+     *
+     * @param array<string, mixed> $attributes
+     * @param array<string, mixed> $values
+     */
+    public static function firstOrCreate(array $attributes = [], array $values = []): static
+    {
+        $model = new static();
+        $query = $model->query();
+
+        foreach ($attributes as $key => $value) {
+            $query->where($key, '=', $value);
+        }
+
+        $instance = $query->first();
+        if ($instance !== null) {
+            return $instance instanceof static ? $instance : $model->newFromBuilder($instance);
+        }
+
+        return static::create(array_merge($attributes, $values));
+    }
+
+    /**
+     * Create or update a record matching the attributes, and fill it with values.
+     *
+     * @param array<string, mixed> $attributes
+     * @param array<string, mixed> $values
+     */
+    public static function updateOrCreate(array $attributes, array $values = []): static
+    {
+        $model = new static();
+        $query = $model->query();
+
+        foreach ($attributes as $key => $value) {
+            $query->where($key, '=', $value);
+        }
+
+        $instance = $query->first();
+        if ($instance !== null) {
+            $existing = $instance instanceof static ? $instance : $model->newFromBuilder($instance);
+            $existing->fill($values);
+            $existing->save();
+            return $existing;
+        }
+
+        return static::create(array_merge($attributes, $values));
+    }
+
+    /**
      * Find a model by its primary key.
      */
     public static function find(mixed $id): ?static
@@ -718,6 +773,207 @@ abstract class Model implements ArrayAccess, JsonSerializable
         );
     }
 
+    /**
+     * Define a HasOneThrough relationship.
+     *
+     * @template TRelated of Model
+     * @template TThrough of Model
+     * @param class-string<TRelated> $related
+     * @param class-string<TThrough> $through
+     */
+    protected function hasOneThrough(
+        string $related,
+        string $through,
+        ?string $firstKey = null,
+        ?string $secondKey = null,
+        ?string $localKey = null,
+        ?string $secondLocalKey = null
+    ): HasOneThrough {
+        /** @var TRelated $relatedInstance */
+        $relatedInstance = new $related();
+        /** @var TThrough $throughInstance */
+        $throughInstance = new $through();
+
+        $firstKey = $firstKey ?? $this->getForeignKey();
+        $secondKey = $secondKey ?? $throughInstance->getForeignKey();
+        $localKey = $localKey ?? $this->primaryKey;
+        $secondLocalKey = $secondLocalKey ?? $throughInstance->primaryKey;
+
+        return new HasOneThrough(
+            $relatedInstance->query(),
+            $this,
+            $relatedInstance,
+            $throughInstance,
+            $firstKey,
+            $secondKey,
+            $localKey,
+            $secondLocalKey
+        );
+    }
+
+    /**
+     * Define a polymorphic, inverse one-to-one or many relationship.
+     */
+    protected function morphTo(
+        ?string $name = null,
+        ?string $type = null,
+        ?string $id = null,
+        string $ownerKey = 'id'
+    ): MorphTo {
+        if ($name === null) {
+            $backtrace = debug_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS, 2);
+            $name = $backtrace[1]['function'] ?? 'morphable';
+        }
+
+        $type = $type ?? "{$name}_type";
+        $id = $id ?? "{$name}_id";
+
+        return new MorphTo(
+            $this->query(),
+            $this,
+            $this,
+            $type,
+            $id,
+            $ownerKey
+        );
+    }
+
+    /**
+     * Define a polymorphic one-to-one relationship.
+     *
+     * @template T of Model
+     * @param class-string<T> $related
+     */
+    protected function morphOne(
+        string $related,
+        string $name,
+        ?string $type = null,
+        ?string $id = null,
+        ?string $localKey = null
+    ): MorphOne {
+        /** @var T $instance */
+        $instance = new $related();
+
+        $type = $type ?? "{$name}_type";
+        $id = $id ?? "{$name}_id";
+        $localKey = $localKey ?? $this->primaryKey;
+
+        return new MorphOne(
+            $instance->query(),
+            $this,
+            $instance,
+            $type,
+            $id,
+            $localKey
+        );
+    }
+
+    /**
+     * Define a polymorphic one-to-many relationship.
+     *
+     * @template T of Model
+     * @param class-string<T> $related
+     */
+    protected function morphMany(
+        string $related,
+        string $name,
+        ?string $type = null,
+        ?string $id = null,
+        ?string $localKey = null
+    ): MorphMany {
+        /** @var T $instance */
+        $instance = new $related();
+
+        $type = $type ?? "{$name}_type";
+        $id = $id ?? "{$name}_id";
+        $localKey = $localKey ?? $this->primaryKey;
+
+        return new MorphMany(
+            $instance->query(),
+            $this,
+            $instance,
+            $type,
+            $id,
+            $localKey
+        );
+    }
+
+    /**
+     * Define a polymorphic many-to-many relationship.
+     *
+     * @template T of Model
+     * @param class-string<T> $related
+     */
+    protected function morphToMany(
+        string $related,
+        string $name,
+        ?string $table = null,
+        ?string $foreignPivotKey = null,
+        ?string $relatedPivotKey = null,
+        ?string $parentKey = null,
+        ?string $relatedKey = null
+    ): MorphToMany {
+        /** @var T $instance */
+        $instance = new $related();
+
+        $table = $table ?? "{$name}s";
+        $foreignPivotKey = $foreignPivotKey ?? "{$name}_id";
+        $relatedPivotKey = $relatedPivotKey ?? $instance->getForeignKey();
+        $morphType = "{$name}_type";
+        $parentKey = $parentKey ?? $this->primaryKey;
+        $relatedKey = $relatedKey ?? $instance->primaryKey;
+
+        return new MorphToMany(
+            $instance->query(),
+            $this,
+            $instance,
+            $table,
+            $foreignPivotKey,
+            $relatedPivotKey,
+            $morphType,
+            $parentKey,
+            $relatedKey
+        );
+    }
+
+    /**
+     * Define a polymorphic inverse many-to-many relationship.
+     *
+     * @template T of Model
+     * @param class-string<T> $related
+     */
+    protected function morphedByMany(
+        string $related,
+        string $name,
+        ?string $table = null,
+        ?string $foreignPivotKey = null,
+        ?string $relatedPivotKey = null,
+        ?string $parentKey = null,
+        ?string $relatedKey = null
+    ): MorphedByMany {
+        /** @var T $instance */
+        $instance = new $related();
+
+        $table = $table ?? "{$name}s";
+        $foreignPivotKey = $foreignPivotKey ?? $this->getForeignKey();
+        $relatedPivotKey = $relatedPivotKey ?? "{$name}_id";
+        $morphType = "{$name}_type";
+        $parentKey = $parentKey ?? $this->primaryKey;
+        $relatedKey = $relatedKey ?? $instance->primaryKey;
+
+        return new MorphedByMany(
+            $instance->query(),
+            $this,
+            $instance,
+            $table,
+            $foreignPivotKey,
+            $relatedPivotKey,
+            $morphType,
+            $parentKey,
+            $relatedKey
+        );
+    }
+
     // --- Model Event Listeners & Hooks ---
 
     /**
@@ -776,6 +1032,40 @@ abstract class Model implements ArrayAccess, JsonSerializable
     public static function restored(callable $callback): void
     {
         static::registerModelEvent('restored', $callback);
+    }
+
+    /**
+     * Register an observer with the model.
+     *
+     * Accepts a class name (string) or an already-instantiated object.
+     * Every public method on the observer whose name matches a model event
+     * will be automatically registered as a listener for that event.
+     *
+     * Supported events: creating, created, updating, updated, saving, saved,
+     *                   deleting, deleted, restoring, restored, forceDeleted.
+     *
+     * @param object|class-string $observer
+     */
+    public static function observe(object|string $observer): void
+    {
+        $instance = is_string($observer) ? new $observer() : $observer;
+
+        $events = [
+            'creating', 'created',
+            'updating', 'updated',
+            'saving',   'saved',
+            'deleting', 'deleted',
+            'restoring', 'restored',
+            'forceDeleted',
+        ];
+
+        foreach ($events as $event) {
+            if (method_exists($instance, $event)) {
+                static::registerModelEvent($event, function (self $model) use ($instance, $event): void {
+                    $instance->$event($model);
+                });
+            }
+        }
     }
 
     /**

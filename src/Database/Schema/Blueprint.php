@@ -173,6 +173,156 @@ class Blueprint
     }
 
     /**
+     * Add a BIGINT column.
+     */
+    public function bigInteger(string $name, bool $autoIncrement = false, bool $unsigned = false): self
+    {
+        $this->columns[] = [
+            'name'           => $name,
+            'type'           => 'bigInteger',
+            'nullable'       => false,
+            'default'        => null,
+            'auto_increment' => $autoIncrement,
+            'primary'        => false,
+            'unsigned'       => $unsigned,
+        ];
+        return $this;
+    }
+
+    /**
+     * Add an UNSIGNED INTEGER column.
+     */
+    public function unsignedInteger(string $name): self
+    {
+        $this->columns[] = [
+            'name'           => $name,
+            'type'           => 'unsignedInteger',
+            'nullable'       => false,
+            'default'        => null,
+            'auto_increment' => false,
+            'primary'        => false,
+        ];
+        return $this;
+    }
+
+    /**
+     * Add a foreign key ID column (unsigned big integer / integer).
+     */
+    public function foreignId(string $name): self
+    {
+        $this->columns[] = [
+            'name'           => $name,
+            'type'           => 'foreignId',
+            'nullable'       => false,
+            'default'        => null,
+            'auto_increment' => false,
+            'primary'        => false,
+        ];
+        return $this;
+    }
+
+    /**
+     * Add a DATE column.
+     */
+    public function date(string $name): self
+    {
+        $this->columns[] = [
+            'name'           => $name,
+            'type'           => 'date',
+            'nullable'       => false,
+            'default'        => null,
+            'auto_increment' => false,
+            'primary'        => false,
+        ];
+        return $this;
+    }
+
+    /**
+     * Add a DATETIME column.
+     */
+    public function dateTime(string $name): self
+    {
+        $this->columns[] = [
+            'name'           => $name,
+            'type'           => 'dateTime',
+            'nullable'       => false,
+            'default'        => null,
+            'auto_increment' => false,
+            'primary'        => false,
+        ];
+        return $this;
+    }
+
+    /**
+     * Add a DECIMAL column with precision and scale.
+     */
+    public function decimal(string $name, int $precision = 8, int $scale = 2): self
+    {
+        $this->columns[] = [
+            'name'           => $name,
+            'type'           => 'decimal',
+            'precision'      => $precision,
+            'scale'          => $scale,
+            'nullable'       => false,
+            'default'        => null,
+            'auto_increment' => false,
+            'primary'        => false,
+        ];
+        return $this;
+    }
+
+    /**
+     * Add a FLOAT column.
+     */
+    public function float(string $name): self
+    {
+        $this->columns[] = [
+            'name'           => $name,
+            'type'           => 'float',
+            'nullable'       => false,
+            'default'        => null,
+            'auto_increment' => false,
+            'primary'        => false,
+        ];
+        return $this;
+    }
+
+    /**
+     * Add a JSON column.
+     */
+    public function json(string $name): self
+    {
+        $this->columns[] = [
+            'name'           => $name,
+            'type'           => 'json',
+            'nullable'       => false,
+            'default'        => null,
+            'auto_increment' => false,
+            'primary'        => false,
+        ];
+        return $this;
+    }
+
+    /**
+     * Add an ENUM column with allowed values.
+     *
+     * @param array<string> $allowed
+     */
+    public function enum(string $name, array $allowed): self
+    {
+        $this->columns[] = [
+            'name'           => $name,
+            'type'           => 'enum',
+            'allowed'        => $allowed,
+            'nullable'       => false,
+            'default'        => null,
+            'auto_increment' => false,
+            'primary'        => false,
+        ];
+        return $this;
+    }
+
+    /**
      * Add a remember_token string column (nullable, 100 chars).
      */
     public function rememberToken(): self
@@ -218,12 +368,21 @@ class Blueprint
             }
 
             $typeSql = match ($column['type']) {
-                'string'  => 'VARCHAR(' . ($column['length'] ?? 255) . ')',
-                'text'    => 'TEXT',
-                'integer' => 'INTEGER',
-                'boolean' => 'INTEGER',
-                'timestamp' => 'DATETIME',
-                default   => 'TEXT',
+                'string'          => 'VARCHAR(' . ($column['length'] ?? 255) . ')',
+                'text'            => 'TEXT',
+                'integer'         => 'INTEGER',
+                'bigInteger'      => 'INTEGER',
+                'unsignedInteger' => 'INTEGER',
+                'foreignId'       => 'INTEGER',
+                'boolean'         => 'INTEGER',
+                'timestamp'       => 'DATETIME',
+                'dateTime'        => 'DATETIME',
+                'date'            => 'DATE',
+                'decimal'         => 'NUMERIC',
+                'float'           => 'REAL',
+                'json'            => 'TEXT',
+                'enum'            => 'TEXT',
+                default           => 'TEXT',
             };
         } else {
             // MySQL
@@ -232,12 +391,21 @@ class Blueprint
             }
 
             $typeSql = match ($column['type']) {
-                'string'  => 'VARCHAR(' . ($column['length'] ?? 255) . ')',
-                'text'    => 'TEXT',
-                'integer' => 'INT',
-                'boolean' => 'TINYINT(1)',
-                'timestamp' => 'TIMESTAMP',
-                default   => 'TEXT',
+                'string'          => 'VARCHAR(' . ($column['length'] ?? 255) . ')',
+                'text'            => 'TEXT',
+                'integer'         => 'INT',
+                'bigInteger'      => (!empty($column['unsigned']) ? 'BIGINT UNSIGNED' : 'BIGINT'),
+                'unsignedInteger' => 'INT UNSIGNED',
+                'foreignId'       => 'BIGINT UNSIGNED',
+                'boolean'         => 'TINYINT(1)',
+                'timestamp'       => 'TIMESTAMP',
+                'dateTime'        => 'DATETIME',
+                'date'            => 'DATE',
+                'decimal'         => 'DECIMAL(' . ($column['precision'] ?? 8) . ', ' . ($column['scale'] ?? 2) . ')',
+                'float'           => 'DOUBLE',
+                'json'            => 'JSON',
+                'enum'            => 'ENUM(' . implode(', ', array_map(fn($val) => "'" . addslashes((string) $val) . "'", $column['allowed'] ?? [])) . ')',
+                default           => 'TEXT',
             };
         }
 
@@ -252,7 +420,7 @@ class Blueprint
             } else {
                 $defaultSql = ' DEFAULT ' . $column['default'];
             }
-        } elseif ($column['nullable'] && in_array($column['type'], ['timestamp', 'string', 'text', 'boolean', 'integer'], true)) {
+        } elseif ($column['nullable'] && in_array($column['type'], ['timestamp', 'dateTime', 'date', 'string', 'text', 'boolean', 'integer', 'bigInteger', 'unsignedInteger', 'foreignId', 'decimal', 'float', 'json'], true)) {
             $defaultSql = ' DEFAULT NULL';
         }
 

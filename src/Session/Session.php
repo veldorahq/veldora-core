@@ -184,4 +184,59 @@ class Session
     {
         $this->data = ['_flash' => ['old' => [], 'new' => []]];
     }
+
+    /**
+     * Get all session data.
+     *
+     * @return array<string, mixed>
+     */
+    public function all(): array
+    {
+        return $this->data;
+    }
+
+    /**
+     * Pull a value from the session (get and forget).
+     */
+    public function pull(string $key, mixed $default = null): mixed
+    {
+        $value = $this->get($key, $default);
+        $this->forget($key);
+        return $value;
+    }
+
+    /**
+     * Alias for csrfToken.
+     */
+    public function token(): string
+    {
+        return $this->csrfToken();
+    }
+
+    /**
+     * Flash current input into the session for the next request.
+     *
+     * @param array<string, mixed> $input
+     */
+    public function flashInput(array $input): void
+    {
+        $this->flash('_old_input', $input);
+    }
+
+    /**
+     * Retrieve old flashed input.
+     */
+    public function old(?string $key = null, mixed $default = null): mixed
+    {
+        $old = $this->get('_old_input', []);
+        if (!is_array($old)) {
+            return $default;
+        }
+
+        if ($key === null) {
+            return $old;
+        }
+
+        return $old[$key] ?? $default;
+    }
 }

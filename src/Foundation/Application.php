@@ -13,7 +13,10 @@ use Veldora\Framework\Session\FileDriver;
 
 final class Application extends Container
 {
-    public const VERSION = '0.5.7';
+    /**
+     * The Veldora Framework version.
+     */
+    public const VERSION = '0.6.0';
 
     /**
      * The static instance of the application.
@@ -113,6 +116,9 @@ final class Application extends Container
         });
         $this->singleton(\Veldora\Framework\Logging\LogManager::class, function () {
             return new \Veldora\Framework\Logging\LogManager($this);
+        });
+        $this->singleton(\Veldora\Framework\Http\ResponseFactory::class, function () {
+            return new \Veldora\Framework\Http\ResponseFactory();
         });
     }
 

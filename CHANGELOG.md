@@ -5,6 +5,31 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## [0.6.0] — 2026-09-08
+
+### Added
+- **`Blueprint` Schema Helpers**: Added `date()`, `dateTime()`, `decimal()`, `float()`, `bigInteger()`, `unsignedInteger()`, `foreignId()`, `json()`, and `enum()` with SQLite & MySQL SQL compilation.
+- **ORM Model Methods**: Native `Model::create()`, `Model::firstOrCreate()`, and `Model::updateOrCreate()` implementations.
+- **Advanced & Polymorphic Database Relations**: Implemented `HasOneThrough`, `MorphTo`, `MorphOne`, `MorphMany`, `MorphToMany`, and `MorphedByMany` relation classes along with Model helper methods (`hasOneThrough`, `morphTo`, `morphOne`, `morphMany`, `morphToMany`, `morphedByMany`).
+- **`Relation::__call()` & `get()` Proxying**: `Relation` base class proxies unknown query calls to the underlying `QueryBuilder` and provides `get()` alias, so queries like `$post->comments()->where('approved', '=', 1)->count()` work natively.
+- **Dedicated HTTP Response Layer**:
+  - `JsonResponse`: Dedicated JSON response extending base `Response` with `::success()`, `::error()`, `::paginate()`, `merge()`, and `setData()`.
+  - `RedirectResponse`: Extended redirect response with `::to()`, `::back()`, `::intended()`, and fluent `with()`, `withErrors()`, and `withInput()`.
+  - `Session`: Clean framework HTTP session wrapper with flash data lifecycle, old-input persistence, and CSRF token generation/verification.
+  - `UploadedFile`: Uploaded file handler with MIME type sniffing, size validation, and `store()` / `storeAs()` persistence.
+  - `ResponseFactory`: Injectable factory for creating plain, HTML, text, JSON, redirect, download, inline file, and view responses.
+- **Global HTTP Helpers**: Added `response()` helper and updated `redirect()`, `back()`, and `json()` to return dedicated response instances.
+- **`Model::observe()` Observer Wiring**: Class-based lifecycle event listener auto-wiring supporting `creating`, `created`, `updating`, `updated`, `saving`, `saved`, `deleting`, `deleted`, `restoring`, `restored`, and `forceDeleted`.
+- **`make:observer` CLI Generator**: Generate dedicated Model Observer classes in `app/Observers/` with optional `--model=` flag.
+- **`make:rule` CLI Generator**: Generate custom Validation Rule classes in `app/Rules/` implementing `Veldora\Framework\Validation\Rule`.
+- **`make:policy` CLI Generator**: Added built-in authorization policy class generator (`app/Policies/{Name}.php`), expanding CLI suite to **51 built-in commands**.
+- **Expanded Unit Test Suite**: Added `tests/Unit/ObserverAndRuleTest.php` (13 tests) and comprehensive relation/HTTP tests, bringing test coverage to **110 passing tests and 458 assertions**.
+
+### Fixed
+- **`SessionGuard` Resilient Remember Token**: Guarded `remember_token` updates with try-catch so schemas omitting `remember_token` column do not throw `PDOException` on login/logout.
+
+---
+
 ## [0.5.7] — 2026-08-30
 
 ### Added

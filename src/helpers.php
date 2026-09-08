@@ -127,10 +127,15 @@ if (!function_exists('temporary_signed_url')) {
 if (!function_exists('redirect')) {
     /**
      * Create a redirect Response.
+     *
+     * @param array<string, string> $headers
      */
-    function redirect(string $to, int $status = 302): \Veldora\Framework\Http\Response
+    function redirect(?string $to = null, int $status = 302, array $headers = []): \Veldora\Framework\Http\RedirectResponse
     {
-        return \Veldora\Framework\Http\Response::redirect($to, $status);
+        if ($to === null) {
+            return new \Veldora\Framework\Http\RedirectResponse('/', $status, $headers);
+        }
+        return new \Veldora\Framework\Http\RedirectResponse($to, $status, $headers);
     }
 }
 
@@ -138,10 +143,9 @@ if (!function_exists('back')) {
     /**
      * Create a redirect Response back to the previous URL.
      */
-    function back(int $status = 302): \Veldora\Framework\Http\Response
+    function back(int $status = 302, string $fallback = '/'): \Veldora\Framework\Http\RedirectResponse
     {
-        $referer = $_SERVER['HTTP_REFERER'] ?? '/';
-        return redirect($referer, $status);
+        return \Veldora\Framework\Http\RedirectResponse::back($fallback)->setStatusCode($status);
     }
 }
 
@@ -423,5 +427,57 @@ if (!function_exists('db')) {
     function db(): \Veldora\Framework\Database\DB
     {
         return new \Veldora\Framework\Database\DB();
+    }
+}
+
+// ─── HTTP & View Helpers ───────────────────────────────────────────────────
+
+if (!function_exists('view')) {
+    /**
+     * Render a view and return an HTTP Response.
+     *
+     * @param array<string, mixed> $data
+     * @param array<string, string> $headers
+     */
+    function view(string $view, array $data = [], int $status = 200, array $headers = []): \Veldora\Framework\Http\Response
+    {
+        /** @var \Veldora\Framework\View\Engine $engine */
+        $engine = app(\Veldora\Framework\View\Engine::class);
+        $content = $engine->render($view, $data);
+        return new \Veldora\Framework\Http\Response($content, $status, $headers);
+    }
+}
+
+if (!function_exists('json')) {
+    /**
+     * Create a JSON HTTP response.
+     *
+     * @param array<string, string> $headers
+     */
+    function json(mixed $data, int $status = 200, array $headers = []): \Veldora\Framework\Http\JsonResponse
+    {
+        $payload = is_array($data) ? $data : (array) $data;
+        return new \Veldora\Framework\Http\JsonResponse($payload, $status, $headers);
+    }
+}
+
+if (!function_exists('response')) {
+    /**
+     * Return a new response from the application or get the ResponseFactory.
+     *
+     * @param mixed $content
+     * @param int $status
+     * @param array<string, string> $headers
+     */
+    function response(mixed $content = null, int $status = 200, array $headers = []): \Veldora\Framework\Http\Response|\Veldora\Framework\Http\ResponseFactory
+    {
+        /** @var \Veldora\Framework\Http\ResponseFactory $factory */
+        $factory = app(\Veldora\Framework\Http\ResponseFactory::class);
+
+        if (func_num_args() === 0) {
+            return $factory;
+        }
+
+        return $factory->make($content ?? '', $status, $headers);
     }
 }

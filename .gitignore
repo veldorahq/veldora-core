@@ -4,6 +4,8 @@ composer.lock
 .env.backup
 .env.production
 .phpunit.result.cache
+.phpunit.cache/
+/tests/temp_views/
 /storage/framework/views/*
 !/storage/framework/views/.gitkeep
 /storage/framework/sessions/*

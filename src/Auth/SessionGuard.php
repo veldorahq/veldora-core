@@ -104,8 +104,12 @@ class SessionGuard implements GuardInterface
 
         if ($remember) {
             $token = bin2hex(random_bytes(30));
-            $user->remember_token = $token;
-            $user->save();
+            try {
+                $user->remember_token = $token;
+                $user->save();
+            } catch (\Throwable $e) {
+                // Gracefully ignore if the remember_token column does not exist on the user table
+            }
 
             // Set signed cookie for 5 years
             $cookieValue = $user->id . '|' . $token;
@@ -120,8 +124,12 @@ class SessionGuard implements GuardInterface
     {
         if ($this->user() !== null) {
             $user = $this->user();
-            $user->remember_token = null;
-            $user->save();
+            try {
+                $user->remember_token = null;
+                $user->save();
+            } catch (\Throwable $e) {
+                // Gracefully ignore if remember_token column does not exist
+            }
         }
 
         $this->session->forget('_auth_user_id');
