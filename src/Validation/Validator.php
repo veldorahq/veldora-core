@@ -269,6 +269,28 @@ class Validator
     }
 
     /**
+     * Determine if the given attribute has a numeric or integer rule.
+     */
+    protected function hasNumericRule(string $attribute): bool
+    {
+        $rules = $this->rules[$attribute] ?? [];
+        if (is_string($rules)) {
+            $rules = explode('|', $rules);
+        }
+
+        foreach ($rules as $rule) {
+            if (is_string($rule)) {
+                $ruleName = explode(':', $rule, 2)[0];
+                if (in_array($ruleName, ['numeric', 'integer'], true)) {
+                    return true;
+                }
+            }
+        }
+
+        return false;
+    }
+
+    /**
      * Validate minimum length or value.
      */
     protected function validateMin(string $attribute, mixed $value, array $parameters): bool
@@ -276,16 +298,16 @@ class Validator
         if (empty($parameters)) {
             return false;
         }
-        $min = (int) $parameters[0];
+        $min = (float) $parameters[0];
 
-        if (is_string($value)) {
-            return mb_strlen($value) >= $min;
+        if (is_int($value) || is_float($value) || (is_numeric($value) && $this->hasNumericRule($attribute))) {
+            return (float) $value >= $min;
         }
-        if (is_numeric($value)) {
-            return $value >= $min;
+        if (is_string($value)) {
+            return mb_strlen($value) >= (int) $parameters[0];
         }
         if (is_array($value)) {
-            return count($value) >= $min;
+            return count($value) >= (int) $parameters[0];
         }
         return false;
     }
@@ -298,16 +320,16 @@ class Validator
         if (empty($parameters)) {
             return false;
         }
-        $max = (int) $parameters[0];
+        $max = (float) $parameters[0];
 
-        if (is_string($value)) {
-            return mb_strlen($value) <= $max;
+        if (is_int($value) || is_float($value) || (is_numeric($value) && $this->hasNumericRule($attribute))) {
+            return (float) $value <= $max;
         }
-        if (is_numeric($value)) {
-            return $value <= $max;
+        if (is_string($value)) {
+            return mb_strlen($value) <= (int) $parameters[0];
         }
         if (is_array($value)) {
-            return count($value) <= $max;
+            return count($value) <= (int) $parameters[0];
         }
         return false;
     }
@@ -320,19 +342,20 @@ class Validator
         if (count($parameters) < 2) {
             return false;
         }
-        $min = (int) $parameters[0];
-        $max = (int) $parameters[1];
+        $min = (float) $parameters[0];
+        $max = (float) $parameters[1];
 
+        if (is_int($value) || is_float($value) || (is_numeric($value) && $this->hasNumericRule($attribute))) {
+            $num = (float) $value;
+            return $num >= $min && $num <= $max;
+        }
         if (is_string($value)) {
             $len = mb_strlen($value);
-            return $len >= $min && $len <= $max;
-        }
-        if (is_numeric($value)) {
-            return $value >= $min && $value <= $max;
+            return $len >= (int) $parameters[0] && $len <= (int) $parameters[1];
         }
         if (is_array($value)) {
             $count = count($value);
-            return $count >= $min && $count <= $max;
+            return $count >= (int) $parameters[0] && $count <= (int) $parameters[1];
         }
         return false;
     }
@@ -369,6 +392,10 @@ class Validator
         $table = $parameters[0];
         $column = $parameters[1] ?? $attribute;
 
+        if (!preg_match('/^[a-zA-Z0-9_]+$/', $table) || !preg_match('/^[a-zA-Z0-9_]+$/', $column)) {
+            throw new InvalidArgumentException("Invalid table or column identifier in validation rule.");
+        }
+
         $app = Application::getInstance();
         if (!$app->has(Connection::class)) {
             return true; // Gracefully pass when database is not initialized (e.g. testing)
@@ -396,6 +423,10 @@ class Validator
         
         $exceptId = $parameters[2] ?? null;
         $idColumn = $parameters[3] ?? 'id';
+
+        if (!preg_match('/^[a-zA-Z0-9_]+$/', $table) || !preg_match('/^[a-zA-Z0-9_]+$/', $column) || !preg_match('/^[a-zA-Z0-9_]+$/', $idColumn)) {
+            throw new InvalidArgumentException("Invalid table or column identifier in validation rule.");
+        }
 
         $app = Application::getInstance();
         if (!$app->has(Connection::class)) {

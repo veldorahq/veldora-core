@@ -151,6 +151,14 @@ class Request
     }
 
     /**
+     * Normalize a header name to lowercase canonical format.
+     */
+    protected function normalizeHeaderName(string $name): string
+    {
+        return strtolower(str_replace(['_', ' '], '-', $name));
+    }
+
+    /**
      * Parse headers from server variables.
      *
      * @param array<string, mixed> $server
@@ -162,10 +170,10 @@ class Request
 
         foreach ($server as $key => $value) {
             if (str_starts_with($key, 'HTTP_')) {
-                $name = str_replace(' ', '-', ucwords(strtolower(str_replace('_', ' ', substr($key, 5)))));
+                $name = $this->normalizeHeaderName(substr($key, 5));
                 $headers[$name] = (string) $value;
             } elseif (in_array($key, ['CONTENT_TYPE', 'CONTENT_LENGTH', 'CONTENT_MD5'], true)) {
-                $name = str_replace(' ', '-', ucwords(strtolower(str_replace('_', ' ', $key))));
+                $name = $this->normalizeHeaderName($key);
                 $headers[$name] = (string) $value;
             }
         }
@@ -269,8 +277,35 @@ class Request
      */
     public function header(string $key, mixed $default = null): mixed
     {
-        $normalizedKey = str_replace(' ', '-', ucwords(strtolower(str_replace('_', ' ', $key))));
+        $normalizedKey = $this->normalizeHeaderName($key);
         return $this->headers[$normalizedKey] ?? $default;
+    }
+
+    /**
+     * Determine if the request contains a given header.
+     */
+    public function hasHeader(string $key): bool
+    {
+        $normalizedKey = $this->normalizeHeaderName($key);
+        return array_key_exists($normalizedKey, $this->headers);
+    }
+
+    /**
+     * Determine if the current request is asking for JSON in the Accept header.
+     */
+    public function expectsJson(): bool
+    {
+        $accept = (string) $this->header('Accept', '');
+        return str_contains(strtolower($accept), 'application/json') || str_contains(strtolower($accept), '+json');
+    }
+
+    /**
+     * Determine if the request is sending JSON in the Content-Type header.
+     */
+    public function isJson(): bool
+    {
+        $contentType = (string) $this->header('Content-Type', '');
+        return str_contains(strtolower($contentType), 'application/json') || str_contains(strtolower($contentType), '+json');
     }
 
     /**
@@ -280,7 +315,13 @@ class Request
      */
     public function headers(): array
     {
-        return $this->headers;
+        $formatted = [];
+        foreach ($this->headers as $key => $value) {
+            $formatted[$key] = $value;
+            $titleCased = implode('-', array_map('ucfirst', explode('-', $key)));
+            $formatted[$titleCased] = $value;
+        }
+        return $formatted;
     }
 
     /**

@@ -105,12 +105,12 @@ class PasswordBroker
 
     public static function createToken(string $email): string
     {
-        return (new static())->makeToken($email);
+        return (new self())->makeToken($email);
     }
 
     public static function validateToken(string $email, string $token): bool
     {
-        return (new static())->checkToken($email, $token);
+        return (new self())->checkToken($email, $token);
     }
 
     public static function sendResetLink(string $email): string
@@ -133,7 +133,7 @@ class PasswordBroker
                 'password' => $hashedPassword,
             ]);
 
-            (new static())->deleteToken($email);
+            (new self())->deleteToken($email);
             return true;
         } catch (\Throwable $e) {
             return false;

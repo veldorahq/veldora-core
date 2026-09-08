@@ -27,7 +27,8 @@ class CookieJar
         string $sameSite = 'Lax',
         bool $signed = false
     ): void {
-        $this->queued[] = [
+        $key = $name . ':' . $path;
+        $this->queued[$key] = [
             'name' => $name,
             'value' => $value,
             'minutes' => $minutes,
@@ -53,7 +54,24 @@ class CookieJar
         bool $httpOnly = true,
         string $sameSite = 'Lax'
     ): void {
-        $this->queue($name, $value, $minutes, $path, $domain, $secure, $httpOnly, $sameSite, true);
+        $appKey = function_exists('config') ? (string) config('app.key', 'default-key') : 'default-key';
+        if ($appKey === 'default-key' && function_exists('env')) {
+            $appKey = (string) env('APP_KEY', 'default-key');
+        }
+        $signature = hash_hmac('sha256', $value, $appKey);
+        $signedValue = $value . '.' . $signature;
+
+        $this->queue($name, $signedValue, $minutes, $path, $domain, $secure, $httpOnly, $sameSite, true);
+    }
+
+    /**
+     * Get the queued cookies without clearing.
+     *
+     * @return array<array{name: string, value: string, minutes: int, path: string, domain: ?string, secure: bool, httpOnly: bool, sameSite: string, signed: bool}>
+     */
+    public function getQueuedCookies(): array
+    {
+        return array_values($this->queued);
     }
 
     /**
@@ -71,7 +89,7 @@ class CookieJar
      */
     public function flushQueuedCookies(): array
     {
-        $queued = $this->queued;
+        $queued = array_values($this->queued);
         $this->queued = [];
         return $queued;
     }

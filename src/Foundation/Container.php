@@ -30,6 +30,13 @@ class Container implements ContainerInterface
     protected array $instances = [];
 
     /**
+     * The stack of classes currently being built to detect circular dependencies.
+     *
+     * @var array<string>
+     */
+    protected array $buildStack = [];
+
+    /**
      * Retrieve an entry from the container.
      */
     public function get(string $id): mixed
@@ -146,30 +153,65 @@ class Container implements ContainerInterface
     }
 
     /**
+     * Bind a transient dependency (alias for set).
+     */
+    public function bind(string $id, mixed $concrete = null): void
+    {
+        $this->set($id, $concrete);
+    }
+
+    /**
+     * Resolve an entry from the container (alias for get / resolve).
+     */
+    public function make(string $id, array $parameters = []): mixed
+    {
+        if ($this->has($id) || $this->hasInstance($id)) {
+            return $this->get($id);
+        }
+
+        if (class_exists($id)) {
+            return $this->resolve($id);
+        }
+
+        return $this->get($id);
+    }
+
+    /**
      * Resolve a class using reflection autowiring.
      */
     public function resolve(string $class): mixed
     {
+        if (in_array($class, $this->buildStack, true)) {
+            $chain = implode(' -> ', array_merge($this->buildStack, [$class]));
+            throw new ContainerException("Circular dependency detected while resolving [{$chain}].");
+        }
+
         if (!class_exists($class)) {
             throw new ContainerException("Target class [{$class}] does not exist.");
         }
 
-        $reflector = new ReflectionClass($class);
+        $this->buildStack[] = $class;
 
-        if (!$reflector->isInstantiable()) {
-            throw new ContainerException("Target class [{$class}] is not instantiable.");
+        try {
+            $reflector = new ReflectionClass($class);
+
+            if (!$reflector->isInstantiable()) {
+                throw new ContainerException("Target class [{$class}] is not instantiable.");
+            }
+
+            $constructor = $reflector->getConstructor();
+
+            if ($constructor === null) {
+                return new $class();
+            }
+
+            $parameters = $constructor->getParameters();
+            $dependencies = $this->resolveDependencies($parameters, $class);
+
+            return $reflector->newInstanceArgs($dependencies);
+        } finally {
+            array_pop($this->buildStack);
         }
-
-        $constructor = $reflector->getConstructor();
-
-        if ($constructor === null) {
-            return new $class();
-        }
-
-        $parameters = $constructor->getParameters();
-        $dependencies = $this->resolveDependencies($parameters, $class);
-
-        return $reflector->newInstanceArgs($dependencies);
     }
 
     /**

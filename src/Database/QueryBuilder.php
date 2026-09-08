@@ -79,6 +79,13 @@ class QueryBuilder
     protected ?string $modelClass = null;
 
     /**
+     * Eager-load relation names.
+     *
+     * @var array<string>
+     */
+    protected array $eagerLoad = [];
+
+    /**
      * Create a new QueryBuilder instance.
      */
     public function __construct(protected Connection $connection)
@@ -108,6 +115,30 @@ class QueryBuilder
     public function getConnection(): Connection
     {
         return $this->connection;
+    }
+
+    /**
+     * Set the relations to eager-load on the resulting models.
+     *
+     * @param array<string>|string $relations
+     */
+    public function with(array|string $relations): static
+    {
+        $this->eagerLoad = array_merge(
+            $this->eagerLoad,
+            is_array($relations) ? $relations : [$relations]
+        );
+        return $this;
+    }
+
+    /**
+     * Get the eager-load relation names.
+     *
+     * @return array<string>
+     */
+    public function getEagerLoad(): array
+    {
+        return $this->eagerLoad;
     }
 
     /**
@@ -572,10 +603,42 @@ class QueryBuilder
         if ($this->modelClass !== null && class_exists($this->modelClass)) {
             $class = $this->modelClass;
             $dummy = new $class();
-            return array_map(fn ($row) => $dummy->newFromBuilder($row), $results);
+            $models = array_map(fn ($row) => $dummy->newFromBuilder($row), $results);
+
+            if (!empty($this->eagerLoad) && !empty($models)) {
+                $models = $this->eagerLoadRelations($models);
+            }
+
+            return $models;
         }
 
         return $results;
+    }
+
+    /**
+     * Eager-load the specified relations onto the hydrated models.
+     *
+     * @param array<\Veldora\Framework\Database\Model> $models
+     * @return array<\Veldora\Framework\Database\Model>
+     */
+    protected function eagerLoadRelations(array $models): array
+    {
+        foreach ($this->eagerLoad as $relation) {
+            $first = $models[0] ?? null;
+            if ($first === null || !method_exists($first, $relation)) {
+                continue;
+            }
+
+            // Build the relation using the first model as a template
+            $relationInstance = $first->$relation();
+            if (!($relationInstance instanceof \Veldora\Framework\Database\Relations\Relation)) {
+                continue;
+            }
+
+            // Eager-load for all models
+            $relationInstance->eagerLoadFor($models, $relation);
+        }
+        return $models;
     }
 
     /**

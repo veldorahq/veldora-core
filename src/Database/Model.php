@@ -88,6 +88,13 @@ abstract class Model implements ArrayAccess, JsonSerializable
     protected array $original = [];
 
     /**
+     * Loaded relationships cache.
+     *
+     * @var array<string, mixed>
+     */
+    protected array $relations = [];
+
+    /**
      * Indicates if the model exists in the database.
      */
     protected bool $exists = false;
@@ -166,8 +173,25 @@ abstract class Model implements ArrayAccess, JsonSerializable
 
     /**
      * Get a new QueryBuilder instance for the model's table.
+     * Can be called as instance or static method.
      */
-    public function query(): QueryBuilder
+    public static function query(): QueryBuilder
+    {
+        $model = new static();
+        $builder = (new QueryBuilder(static::getConnection()))
+            ->table($model->getTable())
+            ->setModelClass(static::class);
+
+        if ($model->softDelete) {
+            $builder->whereNull('deleted_at');
+        }
+        return $builder;
+    }
+
+    /**
+     * Get a new QueryBuilder for the model (instance method for internal use).
+     */
+    protected function newQuery(): QueryBuilder
     {
         $builder = (new QueryBuilder(static::getConnection()))
             ->table($this->getTable())
@@ -260,6 +284,11 @@ abstract class Model implements ArrayAccess, JsonSerializable
      *
      * @param array<string, mixed>|static $attributes
      */
+    /**
+     * Create a new model instance loaded from database row attributes.
+     *
+     * @param array<string, mixed>|static $attributes
+     */
     public function newFromBuilder(array|self $attributes): static
     {
         if ($attributes instanceof static) {
@@ -271,33 +300,80 @@ abstract class Model implements ArrayAccess, JsonSerializable
         }
 
         $model = new static();
-        $model->attributes = (array) $attributes;
-        $model->original = (array) $attributes;
+        $attrs = (array) $attributes;
+        // Cast primary key to int when it looks like an integer from PDO
+        $pk = $model->primaryKey;
+        if (isset($attrs[$pk]) && is_numeric($attrs[$pk])) {
+            $attrs[$pk] = (int) $attrs[$pk];
+        }
+        $model->attributes = $attrs;
+        $model->original = $attrs;
         $model->exists = true;
         return $model;
     }
 
     /**
+     * Get all of the current attributes on the model.
+     *
+     * @return array<string, mixed>
+     */
+    public function getAttributes(): array
+    {
+        return $this->attributes;
+    }
+
+    /**
+     * Set a loaded relation result on the model.
+     */
+    public function setRelation(string $relation, mixed $value): static
+    {
+        $this->relations[$relation] = $value;
+        return $this;
+    }
+
+    /**
+     * Get a loaded relation value.
+     */
+    public function getRelation(string $relation): mixed
+    {
+        return $this->relations[$relation] ?? null;
+    }
+
+    /**
+     * Determine if the given relation has been loaded.
+     */
+    public function relationLoaded(string $relation): bool
+    {
+        return array_key_exists($relation, $this->relations);
+    }
+
+    /**
      * Get a specific attribute value.
+     * Accessors (getFooAttribute) are checked first, before raw attribute values.
      */
     public function getAttribute(string $key): mixed
     {
-        if (array_key_exists($key, $this->attributes)) {
-            return $this->castAttribute($key, $this->attributes[$key]);
-        }
-
-        // Check if there is a custom accessor method: getFooAttribute()
+        // Check for custom accessor method first: getFooAttribute()
         $accessor = 'get' . str_replace(' ', '', ucwords(str_replace('_', ' ', $key))) . 'Attribute';
         if (method_exists($this, $accessor)) {
             return $this->$accessor($this->attributes[$key] ?? null);
         }
 
-        // Check for relationship
+        if (array_key_exists($key, $this->attributes)) {
+            return $this->castAttribute($key, $this->attributes[$key]);
+        }
+
+        // Serve from eager-loaded relations cache first
+        if (array_key_exists($key, $this->relations)) {
+            return $this->relations[$key];
+        }
+
+        // Lazy-load relationship
         if (method_exists($this, $key)) {
             $relation = $this->$key();
             if ($relation instanceof Relation) {
                 $result = $relation->getResults();
-                $this->attributes[$key] = $result;
+                $this->relations[$key] = $result;
                 return $result;
             }
         }
@@ -369,7 +445,11 @@ abstract class Model implements ArrayAccess, JsonSerializable
      */
     public function __isset(string $key): bool
     {
-        return isset($this->attributes[$key]);
+        return isset($this->attributes[$key])
+            || isset($this->relations[$key])
+            || array_key_exists($key, $this->relations)
+            || method_exists($this, 'get' . str_replace(' ', '', ucwords(str_replace('_', ' ', $key))) . 'Attribute')
+            || (method_exists($this, $key) && $this->getAttribute($key) !== null);
     }
 
     /**
@@ -377,7 +457,7 @@ abstract class Model implements ArrayAccess, JsonSerializable
      */
     public function __unset(string $key): void
     {
-        unset($this->attributes[$key]);
+        unset($this->attributes[$key], $this->relations[$key]);
     }
 
     /**
@@ -413,7 +493,7 @@ abstract class Model implements ArrayAccess, JsonSerializable
                 return false;
             }
 
-            $affected = $this->query()->where($this->primaryKey, '=', $primaryVal)->update($dirty);
+            $affected = $this->newQuery()->where($this->primaryKey, '=', $primaryVal)->update($dirty);
             if ($affected > 0) {
                 $this->original = $this->attributes;
                 $this->fireModelEvent('updated');
@@ -428,9 +508,9 @@ abstract class Model implements ArrayAccess, JsonSerializable
             return false;
         }
 
-        $success = $this->query()->insert($this->attributes);
+        $success = $this->newQuery()->insert($this->attributes);
         if ($success) {
-            $this->attributes[$this->primaryKey] = static::getConnection()->getPdo()->lastInsertId();
+            $this->attributes[$this->primaryKey] = (int) static::getConnection()->getPdo()->lastInsertId();
             $this->original = $this->attributes;
             $this->exists = true;
 
@@ -469,7 +549,7 @@ abstract class Model implements ArrayAccess, JsonSerializable
             return $saved;
         }
 
-        $affected = $this->query()->where($this->primaryKey, '=', $primaryVal)->delete();
+        $affected = $this->newQuery()->where($this->primaryKey, '=', $primaryVal)->delete();
         if ($affected > 0) {
             $this->exists = false;
             $this->fireModelEvent('deleted');
@@ -829,7 +909,7 @@ abstract class Model implements ArrayAccess, JsonSerializable
         $id = $id ?? "{$name}_id";
 
         return new MorphTo(
-            $this->query(),
+            $this->newQuery(),
             $this,
             $this,
             $type,

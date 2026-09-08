@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Veldora\Framework\Storage\Drivers;
 
+use InvalidArgumentException;
 use RecursiveDirectoryIterator;
 use RecursiveIteratorIterator;
 use RuntimeException;
@@ -21,13 +22,31 @@ class LocalDriver implements StorageDriverInterface
 
     /**
      * Get the full path for a relative path, verifying safety against directory traversal.
+     *
+     * @throws \InvalidArgumentException
      */
     public function path(string $path = ''): string
     {
         $normalized = ltrim(str_replace('\\', '/', $path), '/');
-        $fullPath = $this->root . ($normalized !== '' ? '/' . $normalized : '');
 
-        return $fullPath;
+        $parts = explode('/', $normalized);
+        $safeParts = [];
+        foreach ($parts as $part) {
+            if ($part === '' || $part === '.') {
+                continue;
+            }
+            if ($part === '..') {
+                if (empty($safeParts)) {
+                    throw new \InvalidArgumentException("Directory traversal attempt detected in path: [{$path}]");
+                }
+                array_pop($safeParts);
+            } else {
+                $safeParts[] = $part;
+            }
+        }
+
+        $safePath = implode('/', $safeParts);
+        return $this->root . ($safePath !== '' ? '/' . $safePath : '');
     }
 
     public function exists(string $path): bool

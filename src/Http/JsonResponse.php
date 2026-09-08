@@ -14,6 +14,8 @@ namespace Veldora\Framework\Http;
  *   return JsonResponse::success(['token' => $token]);
  *   return JsonResponse::error('Not found', 404);
  *   return JsonResponse::paginate($items, $meta);
+ *
+ * @phpstan-consistent-constructor
  */
 class JsonResponse extends Response
 {

@@ -70,44 +70,22 @@ class FormRequest extends Request
 
     /**
      * Handle a failed authorization attempt.
+     *
+     * @throws \Veldora\Framework\Auth\AuthorizationException
      */
     protected function failedAuthorization(): never
     {
-        if ($this->expectsJson()) {
-            $response = new Response(json_encode([
-                'message' => 'This action is unauthorized.',
-            ]), 403, ['Content-Type' => 'application/json']);
-            $response->send();
-            exit(403);
-        }
-
-        abort(403, 'This action is unauthorized.');
+        throw new \Veldora\Framework\Auth\AuthorizationException('This action is unauthorized.');
     }
 
     /**
      * Handle a failed validation attempt.
+     *
+     * @throws \Veldora\Framework\Validation\ValidationException
      */
     protected function failedValidation(Validator $validator): never
     {
-        $errors = $validator->errors();
-
-        if ($this->expectsJson()) {
-            $response = new Response(json_encode([
-                'message' => 'The given data was invalid.',
-                'errors' => $errors,
-            ]), 422, ['Content-Type' => 'application/json']);
-            $response->send();
-            exit(422);
-        }
-
-        if (function_exists('session')) {
-            session()->flash('errors', $errors);
-            session()->flash('_old_input', $this->all());
-        }
-
-        $prevUrl = $this->header('Referer') ?: '/';
-        header("Location: {$prevUrl}");
-        exit(0);
+        throw new \Veldora\Framework\Validation\ValidationException($validator);
     }
 
     /**

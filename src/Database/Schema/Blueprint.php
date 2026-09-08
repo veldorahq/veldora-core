@@ -9,9 +9,30 @@ class Blueprint
     /**
      * The column definitions.
      *
-     * @var array<array{name: string, type: string, length?: int, nullable: bool, default: mixed, auto_increment: bool, primary: bool}>
+     * @var array<array{name: string, type: string, length?: int, nullable: bool, default: mixed, auto_increment: bool, primary: bool, unique?: bool, unsigned?: bool, precision?: int, scale?: int, allowed?: array<string>}>
      */
     protected array $columns = [];
+
+    /**
+     * The index definitions.
+     *
+     * @var array<array{type: string, name: string, columns: array<string>}>
+     */
+    protected array $indexes = [];
+
+    /**
+     * The foreign key definitions.
+     *
+     * @var array<array{column: string, references: string, on: ?string, onDelete: string, onUpdate: string}>
+     */
+    protected array $foreignKeys = [];
+
+    /**
+     * Additional table commands.
+     *
+     * @var array<array{type: string, name: string}>
+     */
+    protected array $commands = [];
 
     /**
      * Create a new Blueprint instance.
@@ -331,12 +352,131 @@ class Blueprint
     }
 
     /**
+     * Add an index to one or more columns.
+     *
+     * @param string|array<string> $columns
+     */
+    public function index(string|array $columns, ?string $name = null): self
+    {
+        $columns = (array) $columns;
+        $name = $name ?? ($this->table . '_' . implode('_', $columns) . '_index');
+        $this->indexes[] = [
+            'type' => 'index',
+            'name' => $name,
+            'columns' => $columns,
+        ];
+        return $this;
+    }
+
+    /**
+     * Define a foreign key constraint.
+     */
+    public function foreign(string $column): self
+    {
+        $this->foreignKeys[] = [
+            'column' => $column,
+            'references' => 'id',
+            'on' => null,
+            'onDelete' => 'CASCADE',
+            'onUpdate' => 'CASCADE',
+        ];
+        return $this;
+    }
+
+    /**
+     * Specify the referenced column for the foreign key.
+     */
+    public function references(string $column): self
+    {
+        $last = array_key_last($this->foreignKeys);
+        if ($last !== null) {
+            $this->foreignKeys[$last]['references'] = $column;
+        }
+        return $this;
+    }
+
+    /**
+     * Specify the referenced table for the foreign key.
+     */
+    public function on(string $table): self
+    {
+        $last = array_key_last($this->foreignKeys);
+        if ($last !== null) {
+            $this->foreignKeys[$last]['on'] = $table;
+        }
+        return $this;
+    }
+
+    /**
+     * Specify the ON DELETE action for the foreign key.
+     */
+    public function onDelete(string $action): self
+    {
+        $last = array_key_last($this->foreignKeys);
+        if ($last !== null) {
+            $this->foreignKeys[$last]['onDelete'] = strtoupper($action);
+        }
+        return $this;
+    }
+
+    /**
+     * Specify the ON UPDATE action for the foreign key.
+     */
+    public function onUpdate(string $action): self
+    {
+        $last = array_key_last($this->foreignKeys);
+        if ($last !== null) {
+            $this->foreignKeys[$last]['onUpdate'] = strtoupper($action);
+        }
+        return $this;
+    }
+
+    /**
+     * Constrain the previous foreignId column.
+     */
+    public function constrained(?string $table = null, string $column = 'id'): self
+    {
+        $lastCol = array_key_last($this->columns);
+        $colName = $lastCol !== null ? $this->columns[$lastCol]['name'] : 'id';
+        
+        if ($table === null) {
+            // Infer table name: e.g. user_id -> users
+            $base = preg_replace('/_id$/', '', $colName) ?? $colName;
+            $table = $base . 's';
+        }
+
+        $this->foreignKeys[] = [
+            'column' => $colName,
+            'references' => $column,
+            'on' => $table,
+            'onDelete' => 'CASCADE',
+            'onUpdate' => 'CASCADE',
+        ];
+
+        return $this;
+    }
+
+    /**
+     * Drop one or more columns from the table.
+     *
+     * @param string|array<string> $columns
+     */
+    public function dropColumn(string|array $columns): self
+    {
+        foreach ((array) $columns as $column) {
+            $this->commands[] = ['type' => 'dropColumn', 'name' => $column];
+        }
+        return $this;
+    }
+
+    /**
      * Compile table schema creation to SQL.
      */
     public function toSql(string $driver): string
     {
         $columnStatements = [];
         $uniqueConstraints = [];
+        $foreignStatements = [];
 
         foreach ($this->columns as $column) {
             $columnStatements[] = $this->compileColumn($column, $driver);
@@ -347,9 +487,60 @@ class Blueprint
             }
         }
 
-        $all = array_merge($columnStatements, $uniqueConstraints);
+        foreach ($this->foreignKeys as $fk) {
+            if ($fk['on'] !== null) {
+                $foreignStatements[] = "FOREIGN KEY (`{$fk['column']}`) REFERENCES `{$fk['on']}`(`{$fk['references']}`) ON DELETE {$fk['onDelete']} ON UPDATE {$fk['onUpdate']}";
+            }
+        }
 
-        return 'CREATE TABLE IF NOT EXISTS `' . $this->table . '` (' . implode(', ', $all) . ');';
+        $indexStatements = [];
+        if ($driver === 'mysql') {
+            foreach ($this->indexes as $idx) {
+                $cols = implode(', ', array_map(fn($c) => "`{$c}`", $idx['columns']));
+                $indexStatements[] = "INDEX `{$idx['name']}` ({$cols})";
+            }
+        }
+
+        $all = array_merge($columnStatements, $uniqueConstraints, $foreignStatements, $indexStatements);
+
+        $sql = 'CREATE TABLE IF NOT EXISTS `' . $this->table . '` (' . implode(', ', $all) . ');';
+
+        if ($driver === 'sqlite' && !empty($this->indexes)) {
+            foreach ($this->indexes as $idx) {
+                $cols = implode(', ', array_map(fn($c) => "`{$c}`", $idx['columns']));
+                $sql .= " CREATE INDEX IF NOT EXISTS `{$idx['name']}` ON `{$this->table}` ({$cols});";
+            }
+        }
+
+        return $sql;
+    }
+
+    /**
+     * Compile table alterations into SQL statements.
+     *
+     * @return array<string>
+     */
+    public function toAlterSql(string $driver): array
+    {
+        $statements = [];
+
+        foreach ($this->columns as $column) {
+            $colSql = $this->compileColumn($column, $driver);
+            $statements[] = "ALTER TABLE `{$this->table}` ADD COLUMN {$colSql};";
+        }
+
+        foreach ($this->commands as $command) {
+            if ($command['type'] === 'dropColumn') {
+                $statements[] = "ALTER TABLE `{$this->table}` DROP COLUMN `{$command['name']}`;";
+            }
+        }
+
+        foreach ($this->indexes as $idx) {
+            $cols = implode(', ', array_map(fn($c) => "`{$c}`", $idx['columns']));
+            $statements[] = "CREATE INDEX IF NOT EXISTS `{$idx['name']}` ON `{$this->table}` ({$cols});";
+        }
+
+        return $statements;
     }
 
     /**

@@ -17,6 +17,8 @@ namespace Veldora\Framework\Http;
  *   return RedirectResponse::back();
  *   return (new RedirectResponse('/profile'))->with('success', 'Saved!');
  *   return (new RedirectResponse('/form'))->withErrors($errors)->withInput();
+ *
+ * @phpstan-consistent-constructor
  */
 class RedirectResponse extends Response
 {

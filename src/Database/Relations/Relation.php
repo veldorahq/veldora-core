@@ -33,6 +33,21 @@ abstract class Relation
     }
 
     /**
+     * Eager-load the relation for a collection of parent models.
+     * Subclasses should override this for efficient bulk loading.
+     *
+     * @param array<Model> $models
+     */
+    public function eagerLoadFor(array $models, string $relationName): void
+    {
+        foreach ($models as $model) {
+            $relationInstance = $model->$relationName();
+            $result = $relationInstance->getResults();
+            $model->setRelation($relationName, $result);
+        }
+    }
+
+    /**
      * Proxy any QueryBuilder method calls through the relation's query.
      *
      * Enables: $post->comments()->where('approved', '=', 1)->count()

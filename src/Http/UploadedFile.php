@@ -14,6 +14,8 @@ namespace Veldora\Framework\Http;
  *       $file->validate(['image/jpeg','image/png'], maxKb: 2048);
  *       $path = $file->store('uploads/avatars');
  *   }
+ *
+ * @phpstan-consistent-constructor
  */
 class UploadedFile
 {

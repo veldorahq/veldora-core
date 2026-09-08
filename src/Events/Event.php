@@ -29,8 +29,12 @@ abstract class Event
      */
     public static function dispatch(mixed ...$args): array
     {
-        /** @var static $event */
-        $event = new static(...$args);
+        if (isset($args[0]) && $args[0] instanceof static) {
+            $event = $args[0];
+        } else {
+            /** @var static $event */
+            $event = (new \ReflectionClass(static::class))->newInstanceArgs($args);
+        }
 
         /** @var EventDispatcher $dispatcher */
         $dispatcher = app(EventDispatcher::class);

@@ -11,7 +11,9 @@ trait Dispatchable
      */
     public static function dispatch(mixed ...$args): PendingDispatch
     {
-        return new PendingDispatch(new static(...$args));
+        /** @var Job $job */
+        $job = (new \ReflectionClass(static::class))->newInstanceArgs($args);
+        return new PendingDispatch($job);
     }
 
     /**
