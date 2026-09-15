@@ -5,6 +5,18 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## [0.7.0] — 2026-09-12
+
+### Added
+- **Veldora Connect Ecosystem**: Framework v0.7.0 serves as the stable foundation for the `veldora-connect` integration monorepo, starting with `veldora/connect-stripe` (Stripe payment gateway).
+- Compatibility verified with `veldora/connect-stripe ^0.7.0` service provider auto-discovery and container binding.
+
+### Fixed
+- Stability improvements and dependency compatibility fixes for third-party package integration.
+- Connect service provider auto-wiring support validated across container resolution paths.
+
+---
+
 ## [0.6.0] — 2026-09-08
 
 ### Added
