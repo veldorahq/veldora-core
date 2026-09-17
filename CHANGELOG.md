@@ -5,6 +5,14 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## [0.7.1] — 2026-09-17
+
+### Fixed
+- **CLI Development Server (`serve`)**: Fixed issue #8 where static assets in `public/` (e.g. `/css/veldora-ui.css`, `/favicon.svg`) returned 404 when started via `php veldora serve`. Added `-t public` document root parameter alongside `server.php` router script.
+- **Project Base Directory Validation**: Resolved `public/` directory and `server.php` existence using project base `$appBase` rather than relative working directory paths.
+
+---
+
 ## [0.7.0] — 2026-09-12
 
 ### Added

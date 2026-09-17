@@ -16,7 +16,7 @@ final class Application extends Container
     /**
      * The Veldora Framework version.
      */
-    public const VERSION = '0.7.0';
+    public const VERSION = '0.7.1';
 
     /**
      * The static instance of the application.
